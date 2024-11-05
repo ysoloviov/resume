@@ -1,0 +1,36 @@
+- name: Ensure prometheus is installed
+  package:
+    name: prometheus
+    state: present
+
+- name: Ensure directory for custom configuration is present
+  file:
+    path: /etc/systemd/system/prometheus.service.d
+    mode: 0755
+    state: directory
+
+- name: Ensure service file is overridden
+  template:
+    src: override.conf.j2
+    dest: /etc/systemd/system/prometheus.service.d/override.conf
+  notify:
+    - reload_systemd
+    - restart_prometheus
+
+- name: Ensure config file is installed
+  copy:
+    content: "{{ prometheus_config | to_nice_yaml }}"
+    dest: "{{ prometheus_config_file }}"
+  notify: restart_prometheus
+
+- name: Ensure web config file is installed
+  copy:
+    content: "{{ prometheus_web_config | to_nice_yaml }}"
+    dest: "{{ prometheus_web_config_file }}"
+  notify: restart_prometheus
+
+- name: Ensure prometheus service is enabled and started
+  service:
+    name: prometheus
+    enabled: true
+    state: started

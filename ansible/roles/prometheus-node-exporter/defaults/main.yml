@@ -1,0 +1,4 @@
+prometheus_node_exporter_bin: /usr/bin/prometheus-node-exporter
+prometheus_node_exporter_options: ""
+prometheus_node_exporter_http_address: "0.0.0.0"
+prometheus_node_exporter_http_port: 9100

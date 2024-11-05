@@ -1,0 +1,24 @@
+- name: Ensure no other firewalls are installed
+  package:
+    name:
+      - ufw
+      - firewalld
+    state: absent
+
+- name: Ensure iptables is installed
+  package:
+    name: iptables
+    state: present
+
+- name: Ensure config directory is present
+  file:
+    path: "{{ iptables_rules_remote_file | dirname }}"
+    state: directory
+    mode: 0755
+
+- name: Ensure rules are set
+  template:
+    src: "{{ iptables_rules_file }}"
+    dest: "{{ iptables_rules_remote_file }}"
+    mode: 0644
+  notify: restore_rules

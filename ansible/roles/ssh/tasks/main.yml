@@ -1,0 +1,6 @@
+- name: Ensure config file is present
+  template:
+    src: defaults.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-defaults.conf
+  notify:
+    restart_ssh

@@ -1,0 +1,8 @@
+- name: Ensure all configured users are present
+  mysql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(omit) }}"
+    priv: "{{ item.priv | default(omit) }}"
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+  loop: "{{ mysql_users }}"

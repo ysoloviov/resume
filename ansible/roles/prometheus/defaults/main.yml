@@ -1,0 +1,9 @@
+prometheus_bin: /usr/bin/prometheus
+prometheus_lib_dir: /var/lib/prometheus
+prometheus_http_address: "0.0.0.0"
+prometheus_http_port: 9090
+prometheus_config_file: /etc/prometheus/prometheus.yml
+# web
+prometheus_web_config:
+prometheus_web_config_file: /etc/prometheus/web.yml
+prometheus_web_external_url: ""

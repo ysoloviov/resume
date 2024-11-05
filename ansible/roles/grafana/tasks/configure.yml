@@ -1,0 +1,6 @@
+- name: Ensure settings are set
+  when: grafana_config is defined
+  copy:
+    content: "{{ grafana_config | community.general.to_ini }}"
+    dest: /etc/grafana/grafana.ini
+  notify: restart_grafana

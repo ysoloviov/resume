@@ -1,0 +1,7 @@
+mysql_user: mysql
+mysql_group: mysql
+mysql_locales:
+  - en_US.UTF-8
+mysql_init: "/usr/bin/mariadb-install-db"
+mysql_data_dir: "/var/lib/mysql"
+mysql_socket: "/run/mysqld/mysqld.sock"

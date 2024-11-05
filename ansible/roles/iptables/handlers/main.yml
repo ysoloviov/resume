@@ -1,0 +1,3 @@
+- name: Reload rules
+  command: "{{ iptables_restore_bin }} {{ iptables_rules_remote_file }}"
+  listen: restore_rules

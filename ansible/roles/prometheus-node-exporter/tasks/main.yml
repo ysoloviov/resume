@@ -1,0 +1,34 @@
+- name: Ensure prometheus-node-exporter is installed
+  package:
+    name: prometheus-node-exporter
+    state: present
+
+- name: Ensure directory for custom configuration is present
+  file:
+    path: /etc/systemd/system/prometheus-node-exporter.service.d
+    mode: 0755
+    state: directory
+
+- name: Ensure service file is overridden
+  template:
+    src: override.conf.j2
+    dest: /etc/systemd/system/prometheus-node-exporter.service.d/override.conf
+  notify:
+    - reload_systemd
+    - restart_prometheus_node_exporter
+
+- name: Flush handlers if any
+  meta: flush_handlers
+
+- name: Ensure prometheus-node-exporter service is enabled and started
+  service:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started
+
+- name: Ensure node exporter is responding to requests
+  uri:
+    url: "http://{{ prometheus_node_exporter_http_address }}:{{ prometheus_node_exporter_http_port }}"
+    return_content: true
+  register: metrics_output
+  failed_when: "'Metrics' not in metrics_output.content"

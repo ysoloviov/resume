@@ -1,0 +1,26 @@
+- name: Ensure grafana repository is installed on Debian-based systems
+  when: ansible_pkg_mgr == "apt"
+  block:
+    - name: Import Grafana apt gpg key
+      get_url:
+        url: "{{ grafana_apt_key_url }}"
+        dest: "{{ grafana_apt_key }}"
+        mode: 0644
+
+    - name: Ensure grafana apt repository is installed
+      apt_repository:
+        repo: "{{ grafana_apt_repo }}"
+        state: present
+        update_cache: true
+
+- name: Ensure grafana is installed
+  package:
+    name: grafana
+    state: present
+  notify: restart_grafana
+
+- name: Ensure grafana is enabled and started
+  service:
+    name: "{{ grafana_service }}"
+    enabled: true
+    state: started

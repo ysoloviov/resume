@@ -1,0 +1,21 @@
+- name: Ensure database is present
+  mysql_db:
+    name: "{{ item.name }}"
+    encoding: "{{ item.encoding | default('utf8') }}"
+    state: present
+    login_unix_socket: "{{ mysql_socket }}"
+  register: db
+
+- name: Ensure initial schema is imported for the newly created database
+  block:
+    - name: Copy schema file
+      copy:
+        src: "{{ item.schema }}"
+        dest: /tmp
+    - name: Import schema file
+      mysql_db:
+        db: "{{ item.name }}"
+        state: import
+        target: "/tmp/{{ item.schema | basename }}"
+        login_unix_socket: "{{ mysql_socket }}"
+  when: db.changed and item.schema is defined

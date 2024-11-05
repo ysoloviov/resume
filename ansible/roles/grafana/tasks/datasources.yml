@@ -1,0 +1,7 @@
+- name: Ensure datasources are installed
+  when: grafana_datasources is defined
+  loop: "{{ grafana_datasources | dict2items }}"
+  copy:
+    content: "{{ item.value | to_nice_yaml }}"
+    dest: "{{ grafana_config.paths.provisioning | default(__grafana_provisioning_dir)}}/datasources/{{ item.key }}.yaml"
+  notify: restart_grafana

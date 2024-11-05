@@ -1,0 +1,10 @@
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+  listen: reload_systemd
+
+- name: Restart prometheus-node-exporter
+  service:
+    name: prometheus-node-exporter
+    state: restarted
+  listen: restart_prometheus_node_exporter

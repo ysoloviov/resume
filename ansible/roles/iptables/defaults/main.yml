@@ -1,0 +1,2 @@
+iptables_restore_bin: /usr/sbin/iptables-restore
+iptables_rules_remote_file: /etc/iptables/iptables.rules

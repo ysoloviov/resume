@@ -1,0 +1,30 @@
+- name: Ensure directory is present
+  file:
+    path: "{{ item.dest }}"
+    owner: grafana
+    group: grafana
+    state: directory
+    mode: 0700
+
+- name: Download dashboard
+  get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.id }}/revisions/{{ item.revision }}/download"
+    dest: "/tmp/{{ item.id }}.json"
+  changed_when: false
+
+- name: Set proper datasource
+  replace:
+    dest: "/tmp/{{ item.id }}.json"
+    regexp: '"(?:\${)?DS_[A-Z0-9_-]+(?:})?"'
+    replace: '"{{ item.datasource }}"'
+  changed_when: false
+
+- name: Install dashboard
+  copy:
+    src: "/tmp/{{ item.id }}.json"
+    dest: "{{ item.dest }}"
+    remote_src: true
+    owner: grafana
+    group: grafana
+    mode: 0600
+  notify: restart_grafana

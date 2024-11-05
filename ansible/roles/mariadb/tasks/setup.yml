@@ -1,0 +1,29 @@
+- name: Ensure mysql data directory exists
+  file:
+    path: "{{ mysql_data_dir }}"
+    owner: "{{ mysql_user }}"
+    group: "{{ mysql_group }}"
+    state: directory
+    mode: 0700
+
+- name: Stat mysql directory to ensure mysql database is initialized
+  stat:
+    path: "{{ mysql_data_dir }}/mysql"
+  register: mysql_dir
+
+- name: Ensure mysql database is initialized
+  command: "{{ mysql_init }} --user={{ mysql_user }} --basedir=/usr --datadir={{ mysql_data_dir }}"
+  when: not mysql_dir.stat.exists
+
+- name: Ensure all configured locales are present
+  locale_gen:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ mysql_locales }}"
+  notify: restart_mysql
+
+- name: Ensure mysql is enabled and started
+  service:
+    name: mysql
+    enabled: true
+    state: started

@@ -1,0 +1,12 @@
+- name: Ensure remote dashboards are installed
+  when: grafana_remote_dashboards is defined
+  loop: "{{ grafana_remote_dashboards }}"
+  include_tasks: dashboard.yml
+
+- name: Ensure providers are installed
+  when: grafana_dashboards is defined
+  loop: "{{ grafana_dashboards | dict2items }}"
+  copy:
+    content: "{{ item.value | to_nice_yaml }}"
+    dest: "{{ grafana_config.paths.provisioning | default(__grafana_provisioning_dir) }}/dashboards/{{ item.key }}.yaml"
+  notify: restart_grafana

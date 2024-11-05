@@ -1,0 +1,8 @@
+grafana_service: grafana-server
+grafana_apt_key_url: https://apt.grafana.com/gpg.key
+grafana_apt_key: /usr/share/keyrings/grafana.key
+grafana_apt_repo: "deb [arch=amd64 signed-by={{ grafana_apt_key }}] https://apt.grafana.com/ stable main"
+grafana_web_listen_address: "0.0.0.0:3000"
+
+# internal variables
+__grafana_provisioning_dir: /etc/grafana/provisioning

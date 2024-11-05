@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# terminate on fail
+set -euo pipefail
+
+# options
+readonly LOCAL_DIR="$HOME/.backup"
+readonly REMOTE_DIR="backup:~/"
+readonly SNAPSHOTS_NUM=3
+readonly MIN_FILES_NUM=100
+readonly OPTIONS="--recursive --checksum --delete --delete-excluded --links"
+readonly TEMP_DIR=".processing"
+readonly LOCK_FILE="/tmp/$(basename -- "$0").lock"
+readonly INCLUDED=(
+	"$HOME/*"
+
+	# config files
+	"$HOME/.xinitrc"
+	"$HOME/.vim"
+	"$HOME/.config/nvim"
+	"$HOME/.Xresources"
+	"$HOME/.ctags"
+	"$HOME/.gitconfig"
+	"$HOME/.inputrc"
+	"$HOME/.ssh/config"
+	"$HOME/.themes/plain"
+	"$HOME/.bash"{rc,rc.d,_profile}
+	"$HOME/.gtkrc-2.0"
+	"$HOME/.icons/"{default,DMZ}
+	"$HOME/.config/feh"
+	"$HOME/.config/mpv/"{mpv.conf,input.conf,script-opts}
+	"$HOME/.config/picom/picom.conf"
+	"$HOME/.config/sxhkd/sxhkdrc"
+	"$HOME/.config/fontconfig/fonts.conf"
+	"$HOME/.config/vifm/"{colors,vifmrc}
+	"$HOME/.config/cmus/"{rc,solarized.theme}
+	"$HOME/.config/gtk-3.0/settings.ini"
+	"$HOME/.config/dunst"
+	"$HOME/.config/termite/config"
+
+	# etc
+	"/etc/hosts"
+	"/etc/vconsole.conf"
+	"/etc/nginx/"{hosts,templates,nginx.conf}
+	"/etc/php/conf.d"
+	"/etc/modprobe.d/nobeep.conf"
+	"/etc/webapps/phpmyadmin/config.inc.php"
+	"/etc/systemd/system/"{getty@tty1,php-fpm}".service.d"
+	"/etc/X11/xinit/xserverrc"
+	"/etc/X11/xorg.conf.d"
+	"/etc/sudoers.d"
+	"/etc/bash_completion.d/rg_install.sh"
+)
+readonly EXCLUDED=(
+	"$HOME/tmp"
+	"$HOME/src/www/*/"{vendor,var/cache,node_modules}
+	# "$HOME/.vim/pack/vendor"
+)
+readonly LOCAL_ONLY=(
+	# "$HOME/job"
+)
+
+[ -d "$LOCAL_DIR" ] || mkdir --parents $LOCAL_DIR
+cd $LOCAL_DIR
+
+# make sure the script is running once
+exec {fd}> $LOCK_FILE
+flock -n $fd || { echo "Script is already running." >&2; exit 1; }
+
+# remove temp directory in case of crash
+rm --recursive --force $TEMP_DIR
+
+# synchronize changes
+readonly recent=$(ls | tail -n 1)
+readonly today=$(date +%Y.%m.%d)
+rsync $OPTIONS --link-dest ../$recent --relative ${EXCLUDED[@]/#/--exclude=} ${INCLUDED[@]} $TEMP_DIR
+rm --recursive --force $today
+mv $TEMP_DIR $today
+
+# remove oldest snapshot if needed
+ls | head --lines -$SNAPSHOTS_NUM | xargs --no-run-if-empty rm --recursive
+
+# do not backup if there are too few files
+[ $(find . -type f | wc -l) -ge $MIN_FILES_NUM ] || { echo "Not enough files in the directory." >&2; exit 1; }
+
+# synchronize with remote server
+rsync $OPTIONS --itemize-changes --hard-links ${LOCAL_ONLY[@]/#/--exclude=/*/*} "$LOCAL_DIR" "$REMOTE_DIR"

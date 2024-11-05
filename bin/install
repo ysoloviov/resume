@@ -1,0 +1,409 @@
+#!/bin/bash
+
+# terminate on fail
+set -euo pipefail
+
+readonly BIN="$(realpath -s -- "$0")"
+readonly BIN_DIR="$(dirname -- "$BIN")"
+readonly ROOT_DIR="$(realpath -- "$BIN_DIR/..")"
+readonly ENV_FILE_NAME=".env"
+. "$ROOT_DIR/$ENV_FILE_NAME"
+readonly PKG_DIR="$ROOT_DIR/pkg"
+readonly RESTORE_DOLLAR_EXPR='s/{$}/$/g'
+readonly EXE_MODE=755
+readonly FILE_MODE=644
+readonly GREEN='\033[0;32m'
+readonly NC='\033[0m'
+readonly ENV_VAR_PATTERN='$[A-Z]\+'
+# get ip
+read _ _ _ _ _ _ IP _ < <(ip r g 1.0.0.0)
+export IP
+
+usage()
+{
+	echo "$0 [OPTION]... UNIT..."
+	echo "UNITS"
+	printf "  %-20s %s\n" "base" "install system packages"
+	printf "  %-20s %s\n" "services" "install services"
+	printf "  %-20s %s\n" "bin" "install binaries"
+	printf "  %-20s %s\n" "www" "install website"
+	printf "  %-20s %s\n" "hlds" "install original hlds server"
+	printf "  %-20s %s\n" "mods" "install mods"
+	printf "  %-20s %s\n" "all" "install all units"
+	echo "OPTIONS"
+	printf "  %-20s %s\n" "-v, --verbose" "use verbose mode"
+	printf "  %-20s %s\n" "-f, --force" "stop servers if running"
+	printf "  %-20s %s\n" "-d, --dev" "install dev version"
+	printf "  %-20s %s\n" "-h, --host HOST" "set host to HOST"
+	exit 1
+}
+
+install_base()
+{
+	local -r tmp_file="/tmp/pacman.stderr"
+	local -r db_driver="mariadb -u $DB_USER"
+
+	# install packages
+	if which apt-get > /dev/null 2>&1; then
+		apt-get update
+		apt-get -y install nginx mariadb-server lib32gcc-s1 locales \
+			vim bash-completion
+		rm -rf /etc/nginx/sites-*
+		# set hostname
+		echo "$PROJECT_NAME" > /etc/hostname
+		# set locale
+		echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+		locale-gen
+		localectl set-locale LANG=en_US.UTF-8
+		rm -rf /root/.profile
+	elif which pacman > /dev/null 2>&1; then
+		# suppress pacman warnings
+		if ! pacman -Sy --noconfirm --needed nginx mariadb lib32-gcc-libs 2> "$tmp_file"; then
+			cat "$tmp_file" >&2
+			exit $?
+		fi
+	else
+		echo "unsupported distro" >&2
+		exit 1
+	fi
+
+	# add users
+	if ! id "$USER" > /dev/null 2>&1; then
+		useradd --create-home "$USER"
+	fi
+	if ! id "$NGINX_USER" > /dev/null 2>&1; then
+		useradd "$NGINX_USER"
+	fi
+
+	# configure mariadb
+	if $db_driver -e "" 2> /dev/null; then
+		$db_driver < $ROOT_DIR/sql/schema.sql
+		$db_driver -e "ALTER USER $DB_USER@localhost IDENTIFIED BY '$DB_PASS'"
+	fi
+
+	# create project dir
+	install -d -o "$USER" -g "$USER" "$PROJECT_DIR"
+
+	# make home visible for http user
+	chmod $EXE_MODE "/home/$USER"
+}
+
+install_services()
+{
+	local -r system_cfg_dir="$ROOT_DIR/cfg/etc"
+
+	# install system files
+	while read f; do
+		uri="${f#$system_cfg_dir}"
+		dir="$(dirname -- "$uri")"
+		if [ ! -d "/etc/$dir" ]; then
+			mkdir -p "/etc/$dir"
+		fi
+		if grep "$ENV_VAR_PATTERN" "$f" > /dev/null; then
+			envsubst < "$f" | sed "$RESTORE_DOLLAR_EXPR" > "/etc/$uri"
+		else
+			cp "$f" "/etc/$uri"
+		fi
+	done < <(find "$system_cfg_dir" -type f)
+
+	# reload services
+	systemctl daemon-reload
+	systemctl reload nginx.service
+	systemctl -q enable "$PROJECT_NAME@"{27015,27016}
+	systemctl -q enable "$PROJECT_NAME-"{dump,cleanup,restart,rs}.timer
+}
+
+install_bin()
+{
+	# create bin directory
+	install -d -o "$USER" -g "$USER" -m $EXE_MODE "$PROJECT_DIR/bin"
+
+	# copy db
+	install -o "$USER" -g "$USER" -m $EXE_MODE "$BIN_DIR/db" "$PROJECT_DIR/bin"
+
+	# copy .env
+	install -o "$USER" -g "$USER" -m $FILE_MODE \
+		"$ROOT_DIR/$ENV_FILE_NAME" "$PROJECT_DIR"
+}
+
+install_www()
+{
+	local -r is_dev="$1"
+
+	if [ "$is_dev" -eq 1 ]; then
+		rm -rf "$PROJECT_DIR/"{public,ssl}
+		ln -sf "$ROOT_DIR/"{public,ssl} "$PROJECT_DIR"
+		set_perms "$PROJECT_DIR/"{public,ssl}
+	else
+		rsync -a --delete --delete-excluded --exclude '*.md' \
+			--chown "$USER":"$USER" \
+			--chmod "D$EXE_MODE,F$FILE_MODE" \
+			"$ROOT_DIR/"{public,ssl} "$PROJECT_DIR"
+	fi
+}
+
+install_hlds()
+{
+	local -r hlds_archive="$PKG_DIR/hlds.tar.gz"
+	local -r app_id=10
+
+	# extract server files
+	rm -rf "$HLDS_DIR"
+	mkdir "$HLDS_DIR"
+	tar -xzf "$hlds_archive" -C "$HLDS_DIR"
+
+	# create app id file to fix server crash
+	echo $app_id > "$HLDS_DIR/steam_appid.txt"
+
+	# set permissions
+	set_hlds_perms
+}
+
+install_mods()
+{
+	local -r is_dev="$1"
+	local -r plugins_dir="$CSTRIKE_DIR/addons/amxmodx/plugins"
+	local -r hl_cfg_dir="$ROOT_DIR/cfg/hlds"
+	local -r db_bin="$PROJECT_DIR/bin/db"
+
+	if [ $is_dev -eq 1 ]; then
+		local -r copy_cmd="ln -sf"
+	else
+		local -r copy_cmd="cp -r"
+	fi
+
+	# exit if no server installed
+	[ -x "$HLDS_DIR/hlds_linux" ] || { echo "$HLDS_DIR: invalid structure" >&2; exit 1; }
+
+	# remove default welcome message
+	rm -f "$CSTRIKE_DIR/motd.txt"
+
+	# install mods
+	rm -rf "$CSTRIKE_DIR/addons"
+	for f in "$PKG_DIR/"*/*.tar.gz; do
+		tar -xzf "$f" -C "$HLDS_DIR"
+	done
+	echo -e "\nexec \"$USER_CFG_DIR_NAME/game.cfg\"" >> "$CSTRIKE_DIR/game.cfg"
+
+	# change amxmodx log mode
+	echo -e "\namxx_logging 3" >> "$CSTRIKE_DIR/addons/amxmodx/configs/core.ini"
+
+	# delete all links so that we do not overwrite source files
+	find "$HLDS_DIR" -type l -delete
+
+	# install config files
+	while read f; do
+		uri="${f#$hl_cfg_dir}"
+		dir="$(dirname -- "$uri")"
+		if [ ! -d "$HLDS_DIR/$dir" ]; then
+			mkdir -p "$HLDS_DIR/$dir"
+		fi
+		if grep "$ENV_VAR_PATTERN" "$f" > /dev/null; then
+			envsubst < "$f" | sed "$RESTORE_DOLLAR_EXPR" > "$HLDS_DIR/$uri"
+		elif [ $? -eq 1 ]; then
+			$copy_cmd "$f" "$HLDS_DIR/$uri"
+		else
+			exit 1
+		fi
+	done < <(find "$hl_cfg_dir" -type f)
+
+	# install plugins
+	rm -rf "$plugins_dir"
+	$copy_cmd "$ROOT_DIR/plugins/" "$plugins_dir"
+
+	# add links
+	link_dir "../../$HLTV_DIR_NAME" "$CSTRIKE_DIR/$HLTV_DIR_NAME"
+	link_dir "../../$LOGS_DIR_NAME/$HLDS_DIR_NAME" "$CSTRIKE_DIR/logs"
+	ln -sf "../../$CFG_DIR_NAME/listip.cfg" "$CSTRIKE_DIR/listip.cfg"
+	link_dir "../../../../$LOGS_DIR_NAME/amxmodx" "$CSTRIKE_DIR/addons/amxmodx/logs"
+	link_dir "../../../../$LOGS_DIR_NAME/reauthcheck" "$CSTRIKE_DIR/addons/reauthcheck/logs"
+
+	# set permissions
+	set_hlds_perms
+
+	# add maps to the database
+	[ -x "$db_bin" ] && "$db_bin" load-maps
+}
+
+link_dir()
+{
+	local -r links_to="$1"
+	local -r dir="$2"
+
+	rm -rf "$dir"
+	ln -s "$links_to" "$dir"
+}
+
+set_perms()
+{
+	while [ $# -gt 0 ]; do
+		local dir="${1:-}"
+
+		# set owner
+		find "$dir" ! -user "$USER" \
+			-exec chown --no-dereference "$USER":"$USER" {} +
+
+		# set permissions
+		find "$dir" -type d ! -perm $EXE_MODE -exec chmod $EXE_MODE {} +
+		find "$dir" -type f ! -perm $FILE_MODE -exec chmod $FILE_MODE {} +
+		shift
+	done
+}
+
+set_hlds_perms()
+{
+	set_perms "$HLDS_DIR"
+	chmod +x "$HLDS_DIR/"{hlds_linux,hltv}
+}
+
+remove_dev_settings()
+{
+	local -ar config_files=(
+		"$CSTRIKE_DIR/server.cfg"
+		"$CSTRIKE_DIR/$USER_CFG_DIR_NAME/game.cfg"
+		"$CSTRIKE_DIR/addons/amxmodx/configs/plugins.ini"
+	)
+	local -r delete_after="dev$"
+
+	for f in "${config_files[@]}"; do
+		sed -i "/$delete_after/q" "$f"
+	done
+}
+
+is_verbose=0
+is_base=0
+is_services=0
+is_bin=0
+is_www=0
+is_hlds=0
+is_mods=0
+is_dev=0
+is_force=0
+is_unit=0
+remote_host=""
+remote_args=""
+
+while [ $# -gt 0 ]; do
+	arg="${1:-}"
+	arg_len=${#arg}
+	if [ "${arg:0:1}" == "-" ] && [ ! "${arg:1:1}" == "-" ]; then
+		i=1
+		args=()
+		while [ $i -lt $arg_len ]; do
+			args+=("-${arg:$i:1}")
+			i=$(($i + 1))
+		done
+	else
+		args=("$arg")
+	fi
+	for arg in "${args[@]}"; do
+		if [ "$arg" == "-h" ] || [ "$arg" == "--host" ]; then
+			shift
+			remote_host="${1:-}"
+			[ ! -z "$remote_host" ] || { echo "$arg requires parameter" >&2; exit 1; }
+		else
+			remote_args="$remote_args $arg"
+			if [ ! "${arg:0:1}" == "-" ]; then
+				is_unit=1
+			fi
+			case "$arg" in
+				-v|--verbose)
+					is_verbose=1;;
+				-d|--dev)
+					is_dev=1;;
+				-f|--force)
+					is_force=1;;
+				--list-options)
+					echo -v --verbose -f --force -d --dev -h --host
+					exit 0
+					;;
+				--list-units)
+					echo base services bin www hlds mods all
+					exit 0
+					;;
+				base)
+					is_base=1;;
+				services)
+					is_services=1;;
+				bin)
+					is_bin=1;;
+				www)
+					is_www=1;;
+				hlds)
+					is_hlds=1;;
+				mods)
+					is_mods=1;;
+				all)
+					is_base=1
+					is_services=1
+					is_bin=1
+					is_www=1
+					is_hlds=1
+					is_mods=1
+					;;
+				*)
+					usage;;
+			esac
+		fi
+	done
+	shift
+done
+
+[ $is_unit -eq 1 ] || { usage; exit 1; }
+
+install_unit()
+{
+	local -r unit="$1"
+
+	echo -e "[${GREEN}I${NC}] installing $unit"
+	shift
+	install_$unit $@
+	echo -e "[${GREEN}OK${NC}] $unit installed"
+}
+
+init()
+{
+	# local install
+	if [ -z "$remote_host" ]; then
+		[ $EUID -eq 0 ] || { echo "root user required" >&2; exit 1; }
+		# exit if there are servers running
+		if [[ $is_base -eq 1 || $is_hlds -eq 1 || $is_mods -eq 1 ]]; then
+			if systemctl is-active "$PROJECT_NAME"{,-hltv}"@*" > /dev/null; then
+				if [ $is_force -eq 1 ]; then
+					systemctl stop "$PROJECT_NAME@*"
+				else
+					echo "servers are running" >&2
+					exit 1
+				fi
+			fi
+		fi
+
+		[ $is_base -eq 1 ] && install_unit base
+		[ -d "$PROJECT_DIR" ] || { echo "$PROJECT_DIR does not exist ($0 base)" >&2; exit 1; }
+		# should be above "services" unit, otherwise nginx will fail to read cert file
+		[ $is_www -eq 1 ] && install_unit www $is_dev
+		[ $is_services -eq 1 ] && install_unit services
+		[ $is_bin -eq 1 ] && install_unit bin
+		[ $is_hlds -eq 1 ] && install_unit hlds
+		if [ $is_mods -eq 1 ]; then
+			install_unit mods $is_dev
+			[ $is_dev -eq 0 ] && remove_dev_settings
+		fi
+		echo -e "[${GREEN}OK${NC}] installation completed"
+	# remote install
+	else
+		bin="${BIN#$ROOT_DIR/}"
+		echo -e "[${GREEN}I${NC}] syncing project to remote host"
+		rsync -ahL --checksum --info=progress2 \
+			--delete --delete-excluded --exclude /src \
+			"$ROOT_DIR/" "$remote_host:~/$PROJECT_NAME"
+		echo -e "[${GREEN}OK${NC}] project synced"
+		ssh "$remote_host" "~/$PROJECT_NAME/$bin $remote_args"
+	fi
+}
+
+if [ $is_verbose -eq 1 ]; then
+	init
+else
+	init > /dev/null
+fi
