@@ -9,19 +9,21 @@ Telegram: ugn95
 
 - **Migration Administrator** at *GeeksForLess*<br>
   10.2020 to 06.2024
-  - Write bash/php scripts to automate migration process
-  - Provision user accounts, domains and databases
-  - Migrate web-sites and/or mail accounts
-  - Fix broken web-sites
-  - Maintain sheets for reporting (Google Sheets, Microsoft Forms)
+	- Write bash/php scripts to automate migration process
+	- Provision user accounts, domains and databases
+	- Migrate web-sites and/or mail accounts
+	- Fix broken web-sites
+	- Maintain sheets for reporting (Google Sheets, Microsoft Forms)
 
 ## Courses
 
-- **Web development (PHP)** at *Postindustria*<br>
-  2020, 9 weeks ([src](https://github.com/ysoloviov/pi_school_web_4),
-  [cert](/courses/postindustria/offer.pdf))
-- **Linux & Network administration** at *Portaone*<br>
-  2024, 9 weeks (in progress)
+- [**Web development (PHP)**](https://github.com/ysoloviov/pi_school_web_4) at
+  *Postindustria*<br>
+  2020, 9 weeks ([cert](/courses/web-development/offer.pdf))
+- [**Linux & Network
+  administration**](/courses/linux-and-network-administration) at *Portaone*<br>
+  2024, 11 weeks
+  ([cert](/courses/linux-and-network-administration/certificate.pdf))
 
 ## Knowledge and skills
 
@@ -32,10 +34,11 @@ Telegram: ugn95
 - TCP/IP protocol suite
 - Scheduled jobs (cron, systemd timers)
 - Configuration automation ([bash](/bin), [ansible](/ansible/roles))
-- Monitoring ([prometheus](/ansible/roles/prometheus) +
+- Monitoring ([prometheus](/ansible/roles/prometheus),
   [grafana](/ansible/roles/grafana))
-- Web-server configuration ([nginx](/ansible/roles/nginx))
-- Relational DBMS (mysql, [mariadb](/ansible/roles/mariadb))
+- Containerization (docker)
+- Web-server configuration ([nginx](/ansible/roles/nginx), apache)
+- Relational DBMS ([mariadb](/ansible/roles/mariadb), percona-server)
 - Web stack ([PHP](https://github.com/ysoloviov/pi_school_web_4), JS, HTML, CSS)
 - Version control system (git)
 
