@@ -14,6 +14,9 @@ Telegram: ugn95
 	- Migrate web-sites and/or mail accounts
 	- Fix broken web-sites
 	- Maintain sheets for reporting (Google Sheets, Microsoft Forms)
+- **Trainee DevOps Engineer** at *Sintez Technologies*<br>
+  01.2025 to present
+	- Write Ansible roles/playbooks to automate configuration
 
 ## Courses
 
