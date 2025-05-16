@@ -1,6 +1,6 @@
 # Resume
 
-Full name: **Yevhenii Soloviov**<br>
+Full name: **Yevhen Soloviov**<br>
 Residence: Mykolaiv, Ukraine<br>
 Email: **damage220 "at" <!--dog-->gmail.<!--dot-->com**<br>
 Telegram: ugn95
