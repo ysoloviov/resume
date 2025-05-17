@@ -7,7 +7,7 @@ Telegram: ugn95
 
 ## Work experience
 
-- **Migration Administrator** at
+- **System Administrator** at
   [GeeksForLess](https://jobs.dou.ua/companies/geeksforless)<br>
   10.2020 to 06.2024
 	- Write bash/php scripts to automate migration process
