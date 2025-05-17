@@ -14,10 +14,16 @@ Telegram: ugn95
 	- Provision user accounts, domains and databases
 	- Migrate web-sites and/or mail accounts
 	- Fix broken web-sites
+	- Update DNS records
 	- Maintain sheets for reporting (Google Sheets, Microsoft Forms)
-- **Trainee DevOps Engineer** at
+- **DevOps Engineer** at
   [Sintez Technologies](https://jobs.dou.ua/companies/sintez-technologies)<br>
   01.2025 to present
+	- Setup OpenVPN server
+	- Setup PXE boot server
+	- Build custom FreeBSD/Ubuntu images
+	- Provision DigitalOcean's services using Terraform
+	- Setup Jenkins, Gitlab Integrations/Webhooks/Runners
 	- Write Ansible roles/playbooks to automate configuration
 
 ## Courses
@@ -33,9 +39,9 @@ Telegram: ugn95
 
 ## Knowledge and skills
 
-- Linux administration (debian-based, redhat-based)
-- Network configuration: routing, NAT, firewall (ip,
-  [iptables](/ansible/templates/fw.rules.j2), NetworkManager)
+- Linux administration (Debian/Ubuntu, FreeBSD, Arch Linux)
+- Network configuration: routing, NAT, firewall
+  (ip, [iptables](/ansible/templates/fw.rules.j2), NetworkManager)
 - Network troubleshooting (tcpdump, wireshark)
 - TCP/IP protocol suite
 - Scheduled jobs (cron, systemd timers)
@@ -43,6 +49,8 @@ Telegram: ugn95
 - Monitoring ([prometheus](/ansible/roles/prometheus),
   [grafana](/ansible/roles/grafana))
 - Containerization (docker)
+- Virtualization (VirtualBox)
+- CI/CD (Jenkins, Gitlab Integrations/Webhooks/Runners)
 - Web-server configuration ([nginx](/ansible/roles/nginx), apache)
 - Relational DBMS ([mariadb](/ansible/roles/mariadb), percona-server)
 - Web stack ([PHP](https://github.com/ysoloviov/pi_school_web_4), JS, HTML, CSS)
