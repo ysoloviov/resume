@@ -36,6 +36,10 @@ Telegram: ugn95
   [Portaone](https://jobs.dou.ua/companies/portaone)<br>
   2024, 11 weeks
   ([cert](/courses/linux-and-network-administration/certificate.pdf))
+- [**QA**](https://beetroot.academy/courses/online/qa-manual) at
+  [Beetroot Academy](https://jobs.dou.ua/companies/beetroot-academy)<br>
+  2025, 9 weeks
+  (ongoing)
 
 ## Knowledge and skills
 
@@ -44,7 +48,6 @@ Telegram: ugn95
   (ip, [iptables](/ansible/templates/fw.rules.j2), NetworkManager)
 - Network troubleshooting (tcpdump, wireshark)
 - TCP/IP protocol suite
-- Scheduled jobs (cron, systemd timers)
 - Configuration automation ([bash](/bin), [ansible](/ansible/roles))
 - Monitoring ([prometheus](/ansible/roles/prometheus),
   [grafana](/ansible/roles/grafana))
@@ -55,6 +58,9 @@ Telegram: ugn95
 - Relational DBMS ([mariadb](/ansible/roles/mariadb), percona-server)
 - Web stack ([PHP](https://github.com/ysoloviov/pi_school_web_4), JS, HTML, CSS)
 - Version control system (git)
+- Testing tools (TestRail, Postman, SoapUI)
+- Google workspace (Sheets, Docs)
+- Jira
 
 ## Field of interest (hobby)
 
