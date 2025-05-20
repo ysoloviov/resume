@@ -60,6 +60,7 @@ Telegram: ugn95
 - Version control system (git)
 - Testing tools (TestRail, Postman, SoapUI)
 - Google workspace (Sheets, Docs)
+- Generative AI (ChatGPT)
 - Jira
 
 ## Field of interest (hobby)
