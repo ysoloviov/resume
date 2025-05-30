@@ -24,7 +24,9 @@ Telegram: ugn95
 	- Build custom FreeBSD/Ubuntu images
 	- Provision DigitalOcean's services using Terraform
 	- Setup Jenkins, Gitlab Integrations/Webhooks/Runners
-	- Write Ansible roles/playbooks to automate configuration
+	- Write Ansible roles and bash scripts to automate configuration
+	- Retrieve Let's Encrypt certificates using Cloudflare API to pass DNS
+	  challenge
 
 ## Courses
 
@@ -39,7 +41,7 @@ Telegram: ugn95
 - [**QA**](https://beetroot.academy/courses/online/qa-manual) at
   [Beetroot Academy](https://jobs.dou.ua/companies/beetroot-academy)<br>
   2025, 9 weeks
-  (ongoing)
+  ([cert](/courses/qa/certificate.pdf))
 
 ## Knowledge and skills
 
@@ -57,21 +59,25 @@ Telegram: ugn95
 - Web-server configuration ([nginx](/ansible/roles/nginx), apache)
 - Relational DBMS ([mariadb](/ansible/roles/mariadb), percona-server)
 - Web stack ([PHP](https://github.com/ysoloviov/pi_school_web_4), JS, HTML, CSS)
+- JSON, XML, Regular expressions, XPath
+- Testing tools (Postman, SoapUI, Apache JMeter, Selenium IDE, TestRail)
+- Jira, Google Sheets/Docs, Miro
 - Version control system (git)
-- Testing tools (TestRail, Postman, SoapUI)
-- Google workspace (Sheets, Docs)
-- Generative AI (ChatGPT)
-- Jira
+- ChatGPT
 
 ## Field of interest (hobby)
 
 - I like to customize things I use, e.g. tweaking configuration, writing plugins
   for programs/games. I have experience with many languages including C, PAWN,
   php, bash, vimscript, MQL, etc...
-- Play games
+- [Play games](https://steamcommunity.com/profiles/76561198169700490/games/?tab=all)
 
 ## Languages
 
 - **English** - intermediate
-- **Ukrainian** - advanced
+- **Ukrainian** - fluent
 - **Russian** - fluent
+
+## Misc
+
+I have EcoFlow DELTA Max to be autonomous during power outages.
