@@ -1,3 +1,0 @@
-http_user: http
-hosts_dir: /etc/nginx/hosts
-www_dir: /var/www
