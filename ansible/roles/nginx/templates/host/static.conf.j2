@@ -1,0 +1,8 @@
+{% extends "base.conf.j2" %}
+
+{% block server %}
+root {{ host.root }};
+location / {
+	try_files /index.html =404;
+}
+{% endblock %}

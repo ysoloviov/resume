@@ -1,0 +1,21 @@
+# nginx
+nginx_dir: /etc/nginx
+nginx_hosts_dir: "{{ nginx_dir }}/hosts"
+nginx_user: http
+nginx_worker_processes: 1
+nginx_worker_connections: 1024
+
+# cloudflare
+cf_dns_propagation_delay: 60
+
+# ssl
+ssl_dir: /etc/letsencrypt
+acme_sh_user: "{{ nginx_user }}"
+
+# whether or not use acme.sh script to (re)issue certificates
+ssl_use_acme_sh: true
+
+# acme
+acme_account_key: "{{ ssl_dir }}/account.key"
+acme_directory: https://acme-v02.api.letsencrypt.org/directory
+# acme_directory: https://acme-staging-v02.api.letsencrypt.org/directory

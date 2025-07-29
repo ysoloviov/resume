@@ -1,0 +1,43 @@
+- name: Import OS-specific variables
+  include_vars: "{{ item }}"
+  failed_when: false
+  loop:
+    - "{{ ansible_os_family | lower }}-based.yml"
+    - "{{ ansible_os_family | lower }}-based-{{ ansible_distribution_major_version | lower }}.yml"
+    - "{{ ansible_distribution | lower }}.yml"
+    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
+    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version.split('.')[0:2] | join('-') | lower }}.yml"
+
+- name: Install nginx
+  package:
+    name: nginx
+    state: present
+
+- name: Create nginx user
+  user:
+    name: "{{ nginx_user }}"
+
+- name: Copy config
+  template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_dir }}/nginx.conf"
+  notify: reload_nginx
+
+- name: Enable and start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Create directory for hosts
+  file:
+    path: "{{ nginx_hosts_dir }}"
+    state: directory
+
+- name: Configure hosts using acme.sh to generate certificates
+  when: ssl_use_acme_sh is true
+  include_tasks: "acme.sh/configure_hosts.yml"
+
+- name: Configure hosts using ansible modules to generate certificates
+  when: ssl_use_acme_sh is false
+  include_tasks: "ansible/configure_hosts.yml"

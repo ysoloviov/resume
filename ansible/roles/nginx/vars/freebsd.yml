@@ -1,0 +1,2 @@
+nginx_dir: /usr/local/etc/nginx
+ssl_dir: /usr/local/etc/letsencrypt

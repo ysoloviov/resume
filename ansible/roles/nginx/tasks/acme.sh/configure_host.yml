@@ -1,0 +1,23 @@
+- name: Copy host config
+  template:
+    src: "host/{{ host.template }}.conf.j2"
+    dest: "{{ nginx_hosts_dir }}/{{ host.domain }}.conf"
+  vars:
+    ssl_certificate: "{{ _user.home }}/.acme.sh/{{ host.domain }}_ecc/fullchain.cer"
+    ssl_certificate_key: "{{ _user.home }}/.acme.sh/{{ host.domain }}_ecc/{{ host.domain }}.key"
+  notify: reload_nginx
+
+- name: Retrieve certificate
+  become_user: "{{ _user.name }}"
+  command:
+    cmd: |
+      {{ _user.home }}/.acme.sh/acme.sh
+      --issue
+      --server {{ acme_directory }}
+      --dns dns_cf
+      -d {{ host.domain }}
+      -d www.{{ host.domain }}
+    creates: "{{ _user.home }}/.acme.sh/{{ host.domain }}_ecc"
+  environment:
+    CF_Email: "{{ cf_account_email }}"
+    CF_Token: "{{ cf_dns_token }}"

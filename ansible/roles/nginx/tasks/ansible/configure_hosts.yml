@@ -1,0 +1,35 @@
+- name: Create directory for certificates
+  file:
+    path: "{{ ssl_dir }}"
+    state: directory
+    mode: 0700
+
+- name: Create ACME account key
+  community.crypto.openssl_privatekey:
+    path: "{{ acme_account_key }}"
+
+- name: Configure hosts
+  include_tasks: configure_host.yml
+  loop: "{{ nginx_hosts }}"
+  loop_control:
+    loop_var: host
+
+- name: Wait for DNS propagation
+  when: _wait_for_dns_propagation is defined
+  wait_for:
+    timeout: "{{ cf_dns_propagation_delay }}"
+  delegate_to: localhost
+
+- name: Let the challenge be validated and retrieve the cert
+  when: _challenge.changed
+  community.crypto.acme_certificate:
+    acme_version: 2
+    acme_directory: "{{ acme_directory }}"
+    challenge: dns-01
+    account_key_src: "{{ acme_account_key }}"
+    csr: "{{ ssl_dir }}/{{ item.domain }}/{{ item.domain }}.csr"
+    dest: "{{ ssl_dir }}/{{ item.domain }}/{{ item.domain }}.crt"
+    fullchain: "{{ ssl_dir }}/{{ item.domain }}/{{ item.domain }}-fullchain.crt"
+    data: "{{ _challenge }}"
+  loop: "{{ nginx_hosts }}"
+  notify: reload_nginx

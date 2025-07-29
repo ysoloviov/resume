@@ -1,0 +1,46 @@
+- name: Create user for acme.sh
+  user:
+    name: "{{ acme_sh_user }}"
+    state: present
+    create_home: true
+  register: _user
+
+- name: Stat acme.sh directory
+  stat:
+    path: "{{ _user.home }}/.acme.sh"
+  register: _acme_sh_dir
+
+- name: Download and install acme.sh
+  when: not _acme_sh_dir.stat.exists
+  block:
+    - name: Download acme.sh install script
+      get_url:
+        url: "https://get.acme.sh"
+        dest: /tmp/acme-install.sh
+    - name: Install acme.sh
+      become_user: "{{ _user.name }}"
+      command: "sh /tmp/acme-install.sh nocron"
+
+- name: Install cron
+  when: ansible_distribution != "FreeBSD"
+  package:
+    name: cron
+
+- name: Enable and start cron
+  service:
+    name: cron
+    state: started
+    enabled: true
+
+- name: Create cron job to update certificates
+  cron:
+    name: "Update certificates"
+    minute: 46
+    hour: 5
+    job: "sudo -u {{ _user.name }} {{ _user.home }}/.acme.sh --cron --home {{ _user.home }}/.acme.sh > /dev/null && service nginx reload"
+
+- name: Configure hosts
+  include_tasks: configure_host.yml
+  loop: "{{ nginx_hosts }}"
+  loop_control:
+    loop_var: host

@@ -1,0 +1,59 @@
+- name: Copy host config
+  template:
+    src: "host/{{ host.template }}.conf.j2"
+    dest: "{{ nginx_hosts_dir }}/{{ host.domain }}.conf"
+  vars:
+    ssl_certificate: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}-fullchain.crt"
+    ssl_certificate_key: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}.key"
+  notify: reload_nginx
+
+- name: Create directory for domain certificates/keys
+  file:
+    path: "{{ ssl_dir }}/{{ host.domain }}"
+    state: directory
+
+- name: Create domain private key
+  community.crypto.openssl_privatekey:
+    path: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}.key"
+
+- name: Create CSR
+  community.crypto.openssl_csr:
+    path: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}.csr"
+    privatekey_path: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}.key"
+    common_name: "{{ host.domain }}"
+    subject_alt_name:
+      - "DNS:{{ host.domain }}"
+      - "DNS:www.{{ host.domain }}"
+  register: _csr
+
+- name: Create a challenge
+  community.crypto.acme_certificate:
+    acme_version: 2
+    acme_directory: "{{ acme_directory }}"
+    challenge: dns-01
+    account_key_src: "{{ acme_account_key }}"
+    csr: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}.csr"
+    dest: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}.crt"
+    fullchain_dest: "{{ ssl_dir }}/{{ host.domain }}/{{ host.domain }}-fullchain.crt"
+    terms_agreed: true
+    force: "{{ _csr.changed }}"
+  register: _challenge
+
+- name: Set DNS record
+  when: _challenge.changed
+  community.general.cloudflare_dns:
+    domain: "{{ host.domain }}"
+    record: "{{ item.value['dns-01'].record }}"
+    type: TXT
+    value: "\"{{ item.value['dns-01'].resource_value }}\""
+    solo: true
+    account_email: "{{ cf_account_email }}"
+    api_token: "{{ cf_dns_token }}"
+    state: present
+  loop: "{{ _challenge.challenge_data | dict2items }}"
+  register: _dns
+
+- name: Set _wait_for_dns_propagation variable
+  when: _dns.changed
+  set_fact:
+    _wait_for_dns_propagation: 1
