@@ -18,7 +18,7 @@ Telegram: ugn95
 	- Maintain sheets for reporting (Google Sheets, Microsoft Forms)
 - **DevOps Engineer** at
   [Sintez Technologies](https://jobs.dou.ua/companies/sintez-technologies)<br>
-  01.2025 to present
+  01.2025 to 07.2025
 	- Setup OpenVPN server
 	- Setup PXE boot server
 	- Build custom FreeBSD/Ubuntu images
